@@ -1,0 +1,8 @@
+Records: 5
+Total temperature: 5
+Freezing: 2
+Minimum: -5
+Maximum: 8
+Freezing readings:
+101 -5 C
+310 -2 C
