@@ -37,9 +37,10 @@ make test
 [GitHub template-copy instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)
 and [collaborator instructions](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/inviting-collaborators-to-a-personal-repository).
 
-Use a C11 compiler (`gcc` or compatible), GNU Make, Git, and Python 3 (for tests).
+Use a C11 compiler (`gcc` or compatible), GNU Make, and Git. Tests are written
+in C and run with `make test`; Python is not required.
 The Makefile supplies `-std=c11 -Wall -Wextra -Wpedantic -g`. On Debian/Ubuntu,
-the packages are `build-essential git python3`. Other systems may use an
+the packages are `build-essential git`. Other systems may use an
 equivalent compiler/Make installation. Ask for help before setup blocks progress.
 The command-line argument handling in `main.c` is provided; you do not need to
 design a command-line parser. Initially the helpers are TODO stubs and tests fail.
@@ -236,7 +237,7 @@ number of arguments.
   `make test` work from a fresh clone. The supplied Makefile is a starting point;
   update dependencies if you add files. Do not commit object files/executables.
 - **5 points:** add at least **three original test cases per student** in
-  `tests/student_cases.json`, using the documented format. This means at least
+  `tests/student_tests.c`, using the provided `check_program` function. This means at least
   three cases for individual work or six for a pair. Identify each case's author
   in its name, such as `alex: upper temperature boundary`, and explain coverage in
   `CONTRIBUTORS.md`. A test may expose a bug while you work; final cases should
@@ -290,7 +291,7 @@ homework. For example, after finishing the loader:
 
 ```sh
 git status
-git add readings.c readings.h tests/student_cases.json
+git add readings.c readings.h tests/student_tests.c
 git commit -m "Load and validate dynamically allocated readings"
 git push
 ```
@@ -313,9 +314,14 @@ are welcome, provided required behavior remains supported.
 
 ## Test and submit
 
-`make test` runs public integration examples and your JSON cases. Each JSON entry
-has a `name`, an `input` string, and either an exact `report` string for success or
-`"valid": false` for a rejected input. See `tests/README.md`. Run
+`make test` builds the program and the provided C test driver, then runs the
+public integration cases and your cases from `tests/student_tests.c`. Each call
+to `check_program` supplies a descriptive name, input text, and the exact expected
+report (or `NULL` for a rejected input). See `tests/README.md`. The supplied driver
+handles temporary files and running the program; you only add C test calls.
+The driver uses POSIX process support available on Linux/macOS; on Windows use
+WSL or a course Linux environment. You do not need to implement its process APIs.
+Run
 `make sanitize` for the same cases with AddressSanitizer and UndefinedBehaviorSanitizer
 on a compatible GCC/Clang Linux system. A green practice check is **not** the
 entire grade: grading also checks helpers, error paths, memory, your workflow,
@@ -327,7 +333,7 @@ Before the deadline:
 make clean
 make test
 git status
-git add main.c validation.c readings.c readings.h analysis.c analysis.h report.c report.h Makefile tests/student_cases.json CONTRIBUTORS.md
+git add main.c validation.c readings.c readings.h analysis.c analysis.h report.c report.h Makefile tests/student_tests.c CONTRIBUTORS.md
 git commit -m "Finish report generation and boundary tests"
 git push
 git rev-parse HEAD

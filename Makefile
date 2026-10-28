@@ -19,12 +19,15 @@ report.o: report.c report.h analysis.h readings.h
 %.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-test: sensor_report
-	python3 tests/test_public.py ./sensor_report
+tests/test_runner: tests/test_runner.c tests/student_tests.c tests/test.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) tests/test_runner.c tests/student_tests.c -o $@
+
+test: sensor_report tests/test_runner
+	./tests/test_runner
 
 sanitize:
 	$(MAKE) clean
 	$(MAKE) CFLAGS="$(CFLAGS) -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie" LDFLAGS="-fsanitize=address,undefined -no-pie" test
 
 clean:
-	rm -f $(OBJECTS) sensor_report
+	rm -f $(OBJECTS) sensor_report tests/test_runner
