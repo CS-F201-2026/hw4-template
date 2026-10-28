@@ -1,12 +1,14 @@
 # Your test cases
 
-Add at least three cases to `student_cases.json`. It contains a JSON array:
+Each student adds at least three cases to `student_cases.json`: three for an
+individual or six for a pair. Prefix case names with the author's name/username,
+and record the coverage in `CONTRIBUTORS.md`. It contains a JSON array:
 
 ```json
 [
-  {"name": "negative count", "input": "-1\n", "valid": false},
+  {"name": "alex: negative count", "input": "-1\n", "valid": false},
   {
-    "name": "one zero reading",
+    "name": "alex: one zero reading",
     "input": "1\n12 0 C\n",
     "report": "Records: 1\nTotal temperature: 0\nFreezing: 0\nMinimum: 0\nMaximum: 0\nFreezing readings:\n"
   }

@@ -79,7 +79,7 @@ def main():
         except (AssertionError, OSError, subprocess.TimeoutExpired) as error:
             failed += 1
             print('FAIL:', case['name'], '-', error)
-    print(f'{len(cases)-failed}/{len(cases)} cases passed; {len(custom)} student cases (at least 3 required for submission).')
+    print(f'{len(cases)-failed}/{len(cases)} cases passed; {len(custom)} student cases (at least 3 per student required).')
     return bool(failed)
 
 

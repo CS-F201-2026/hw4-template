@@ -2,7 +2,7 @@
 
 **Scheduled release: Wednesday, November 4, 2026. Due Thursday, November 19, 2026.**
 
-Work individually. Build a program that loads sensor readings from a real file,
+Work **individually or in a pair (two students maximum)**. Build a program that loads sensor readings from a real file,
 stores them in a dynamically allocated array, and writes a summary report to a
 second file. This assignment runs on your own computer/compiler, rather than
 NetRun. It practices file I/O, structured data, pointers and ownership, dynamic
@@ -10,16 +10,32 @@ arrays, header/source files, Make, and Git. Sorting and recursion are not requir
 
 ## Get started
 
-Your instructor will give you access to your own private repository. Accept the
-repository invitation, then clone **your assigned repository**, replacing USERNAME:
+Create your own repository; the instructor does not create repositories or form
+pairs for you. For a pair, choose one owner and create **one shared repository**.
+Individual students follow exactly the same setup without adding a partner.
+
+1. Open [hw4-template](https://github.com/CS-F201-2026/hw4-template).
+2. Click **Use this template → Create a new repository**. Choose your **personal
+   GitHub account** as owner, name it `cs201-hw4`, and select **Private**.
+   Use the default branch only. Do not fork the template or create the solution
+   repository in the course organization.
+3. In your new repository, open **Settings → Collaborators → Add people**.
+   Invite **`acmattson3`** so the instructor can grade your private work. For a
+   pair, also invite your partner's GitHub account; the partner must accept.
+   Check that the instructor can access the repo before the deadline.
+4. Each student clones this same repository on their own computer. Replace OWNER
+   below with the GitHub username of the repository's owner:
 
 ```sh
-git clone https://github.com/CS-F201-2026/hw4-USERNAME.git
-cd hw4-USERNAME
+git clone https://github.com/OWNER/cs201-hw4.git
+cd cs201-hw4
 make
 ./sensor_report examples/readings.txt report.txt
 make test
 ```
+
+[GitHub template-copy instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)
+and [collaborator instructions](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/inviting-collaborators-to-a-personal-repository).
 
 Use a C11 compiler (`gcc` or compatible), GNU Make, Git, and Python 3 (for tests).
 The Makefile supplies `-std=c11 -Wall -Wextra -Wpedantic -g`. On Debian/Ubuntu,
@@ -77,17 +93,37 @@ separator rules beyond those conversions is not required.
 ## Required interfaces and ownership
 
 Keep the supplied public structures and function signatures. You may add private
-helpers. Put declarations and shared types in `readings.h` and `report.h` with
-include guards; implement reading/analysis in `readings.c` and writing in
-`report.c`. Compile `.c` files separately and link them; never include a `.c`
+helpers. Shared types/declarations belong in `readings.h`, `analysis.h`, and
+`report.h`, which have include guards. Keep the source responsibilities below.
+Compile `.c` files separately and link them; never include a `.c`
 file. Do not replace the dynamic array with a fixed-size array, variable-length
 array, global buffer, or C++ container. Use `malloc`/`free` (or `calloc`/`free`).
 
-### Part 0: Load and validate (20 points)
+| Source file | Required functions | Responsibility |
+| --- | --- | --- |
+| `validation.c` | `valid_reading`, `read_reading` | Field validation and reading one record |
+| `readings.c` | `load_readings` | Named input file, dynamic allocation, cleanup, ownership transfer |
+| `analysis.c` | `summarize_readings` | Pure summary calculations |
+| `report.c` | `write_summary`, `write_freezing`, `write_report` | Stream output helpers and named report-file lifecycle |
+| `main.c` | `main` | Connect the modules and release the loaded array |
 
-Implement `int load_readings(const char *path, struct Reading **items, int *length)`.
+### Part 0: Load and validate (15 points)
+
+In `validation.c`, implement:
+
+- `int valid_reading(struct Reading reading)`: return nonzero exactly when the
+  ID, temperature, and unit satisfy the input rules. No I/O or mutation.
+- `int read_reading(FILE *in, struct Reading *result)`: use `fscanf` to read one
+  candidate and call `valid_reading`. Return **1** for a valid complete record,
+  **-1** for clean EOF before any fields, or **0** for invalid/partial input or
+  a read error. Set `*result` only on success; preserve it otherwise. Borrow the
+  stream: do not close it. Preconditions: `in` is open/readable and `result`
+  designates a writable record; numeric tokens fit in `int`.
+
+In `readings.c`, implement `int load_readings(const char *path, struct Reading **items, int *length)`.
 Open the named input file, read and validate its count and every record, and check
-for unexpected trailing data. On complete success, return 1 and set both outputs.
+for unexpected trailing data. Call `read_reading` for each of the `N` records;
+do not duplicate its parsing/validation. On complete success, return 1 and set both outputs.
 For zero records, set `*items = NULL` and `*length = 0`. On any failure, return 0
 and leave **both caller outputs unchanged**. A failed load must not leave a partial
 collection for the caller. Handle missing files, malformed/partial input, invalid
@@ -111,9 +147,9 @@ exactly once. `free(NULL)` is permitted for the empty collection. Each function
 that opens a file must close it exactly once and check the close result. You may
 add helpers, but do not change this ownership contract.
 
-### Part 2: Analyze (15 points)
+### Part 2: Analyze (10 points)
 
-Implement `struct Summary summarize_readings(const struct Reading items[], int length)`.
+In `analysis.c`, implement `struct Summary summarize_readings(const struct Reading items[], int length)`.
 Return the count, temperature sum, number of readings **strictly below zero**,
 minimum temperature, and maximum temperature. Zero is not freezing. For an empty
 collection return five zeros; the report prints `N/A` for its extrema. Each call
@@ -125,8 +161,25 @@ that many valid readings. For zero length it may be `NULL`. Sums fit in `int`.
 
 ### Part 3: Write the report (15 points)
 
-Implement `int write_report(const char *path, const struct Reading items[], int length)`.
-Open/create the output file with mode `"w"`, call `summarize_readings`, and write
+In `report.c`, implement these three cooperating functions:
+
+- `int write_summary(FILE *out, struct Summary summary)` writes the **six header
+  lines** below, including `Freezing readings:`. Use `summary.count` to choose
+  numeric extrema or `N/A`. It writes no record rows.
+- `int write_freezing(FILE *out, const struct Reading items[], int length)`
+  writes only the freezing record rows in input order, with no headers.
+- `int write_report(const char *path, const struct Reading items[], int length)`
+  opens the named output, calls `summarize_readings`, then `write_summary` and
+  `write_freezing`, and closes the file. Call the helpers instead of duplicating
+  their formatting/calculations.
+
+The two stream helpers borrow `out`: it is already open/writable and must remain
+open afterward, even on failure. They return 1 if every write succeeds or 0 on
+a write failure; they do not open/close files or modify/free records. For
+`write_summary`, the summary is a valid result of `summarize_readings`. For
+`write_freezing`, the record-range preconditions are the same as for summary.
+
+In `write_report`, open/create the output file with mode `"w"` and write
 exactly the format below, including a final newline. After the six header lines,
 write just the freezing records, in their original order, each as `id temp C`.
 For no freezing records, the file ends immediately after `Freezing readings:`.
@@ -177,18 +230,60 @@ respect that precondition, so detecting aliases is not required. No menus or
 interactive input are needed. The provided usage check already rejects the wrong
 number of arguments.
 
-### Part 5: Build and Git workflow (10 points)
+### Part 5: Build and student tests (10 points)
 
 - **5 points:** preserve the multi-file layout and make `make`, `make clean`, and
   `make test` work from a fresh clone. The supplied Makefile is a starting point;
   update dependencies if you add files. Do not commit object files/executables.
-- **5 points:** develop in your assigned repository, commit at least two
-  meaningful stages of your own implementation with descriptive messages, and
-  push your final source, headers, Makefile, and tests. The initial template
-  commit does not count as an implementation stage. Add at least **three** of
-  your own test cases in `tests/student_cases.json`, using the documented format.
-  A test may expose a bug while you work; the final cases should pass. A final
-  submission needs the repository URL and full commit hash in Canvas.
+- **5 points:** add at least **three original test cases per student** in
+  `tests/student_cases.json`, using the documented format. This means at least
+  three cases for individual work or six for a pair. Identify each case's author
+  in its name, such as `alex: upper temperature boundary`, and explain coverage in
+  `CONTRIBUTORS.md`. A test may expose a bug while you work; final cases should
+  pass. Grading checks useful coverage, not just the number of cases.
+
+### Part 6: Individual Git contributions (10 points per student)
+
+**Every student must author and push their own substantive commits**, including
+when working in a pair. The other 90 points assess the submitted project; these
+10 points are assessed separately for each student:
+
+- **5 points:** at least one personally authored commit implementing or
+  substantially correcting required C functionality. Each partner must implement
+  at least one required function, rather than leaving all programming to one person.
+- **5 points:** at least one **additional**, personally authored substantive
+  code or test commit, with a descriptive message. This must be a different commit
+  from the one used for the first five points.
+
+**No qualifying commits means 0/10 for this category**, even if your partner's
+program is correct. A student with only one qualifying implementation commit can
+earn 5/10. Creating the repo, importing the template, merging without substantive
+authored changes, changing whitespace, or adding only your name does not count.
+Do not split a trivial edit into artificial commits. There is no line-count or
+equal-commit-count requirement; the instructor reviews what changed.
+
+Use your own name and a GitHub-associated email for your commits. Do not make
+your partner's work appear under your name. Co-author credit can document joint
+work, but does not replace each student's own required commits. Complete
+`CONTRIBUTORS.md` with names, GitHub usernames, responsibilities, test coverage,
+and representative commit hashes. Preserve both authors' history; do not squash
+all work into a single final commit.
+
+### Planning work as a pair
+
+The interfaces let you work on separate files without waiting for the whole
+program. A suggested division is:
+
+| Student | Initial responsibilities | Follow-up work |
+| --- | --- | --- |
+| A | `validation.c` and `readings.c`: validation, parsing, dynamic loading | Input/failure tests, resource cleanup, review integration |
+| B | `analysis.c` and `report.c`: summary and report helpers | Summary/output tests, `main.c` integration, review ownership |
+
+This is a suggestion, not a required assignment of roles. Agree on responsibilities
+before coding and record them in `CONTRIBUTORS.md`. Keep the supplied interfaces
+so work can be combined easily. Both students must understand the whole program,
+review each other's work, and run the combined tests. Individuals implement all
+parts. The required program and correctness/style standards are the same either way.
 
 Use Git as you work; there is no required branch/PR workflow for this first Git
 homework. For example, after finishing the loader:
@@ -199,6 +294,12 @@ git add readings.c readings.h tests/student_cases.json
 git commit -m "Load and validate dynamically allocated readings"
 git push
 ```
+
+For pairs using the same main branch, start each work session with
+`git pull --ff-only` while your working tree is clean. Commit your changes, pull
+your partner's latest work, and push. If Git reports diverging histories or a
+conflict, stop and resolve it together (or ask for help); do not force-push over
+your partner's commits. Each student must push their commits before submission.
 
 ### Style (20 points)
 
@@ -226,19 +327,25 @@ Before the deadline:
 make clean
 make test
 git status
-git add main.c readings.c readings.h report.c report.h Makefile tests/student_cases.json
+git add main.c validation.c readings.c readings.h analysis.c analysis.h report.c report.h Makefile tests/student_cases.json CONTRIBUTORS.md
 git commit -m "Finish report generation and boundary tests"
 git push
 git rev-parse HEAD
 ```
 
-Submit your private repository URL and the full hash printed by the last command
-in Canvas. Only pushed work is available for grading. Canvas remains the official
+**Each student submits separately in Canvas**, including both members of a pair.
+Submit the private repository URL, the full final commit hash printed above,
+and your name/GitHub username plus your partner's name/GitHub username (if any).
+Both partners submit the **same repository and final hash**. Ensure all commits
+are pushed, `CONTRIBUTORS.md` is complete, and `acmattson3` has accepted access.
+Only pushed work is available for grading. Canvas remains the official
 gradebook. Follow the syllabus late-work rules; no additional late penalty is
 introduced here. Do not publish your solution or open a PR against the template.
 
-High-level discussion is allowed, but the implementation must represent your
-individual work. Follow the syllabus A0–A5 AI disclosure policy: mark AI-assisted
+You may collaborate fully with your one declared partner. Outside that pair,
+high-level discussion is allowed, but do not exchange implementations. Individual
+submissions must represent your own work; pair submissions must represent the
+declared pair's work. Follow the syllabus A0–A5 AI disclosure policy: mark AI-assisted
 portions with the appropriate level and explain the assistance in a comment or
 `AI_USAGE.md`. Unassisted human work needs no marking. The supplied instructor
 scaffolding is marked A4; it is not a disclosure of your own implementation.

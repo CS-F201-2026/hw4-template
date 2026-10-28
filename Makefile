@@ -2,7 +2,7 @@
 CC = gcc
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -g
 LDFLAGS =
-OBJECTS = main.o readings.o report.o
+OBJECTS = main.o validation.o readings.o analysis.o report.o
 
 .PHONY: all clean test sanitize
 all: sensor_report
@@ -10,9 +10,11 @@ all: sensor_report
 sensor_report: $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS)
 
-main.o: main.c readings.h report.h
+main.o: main.c readings.h analysis.h report.h
+validation.o: validation.c readings.h
 readings.o: readings.c readings.h
-report.o: report.c report.h readings.h
+analysis.o: analysis.c analysis.h readings.h
+report.o: report.c report.h analysis.h readings.h
 
 %.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
