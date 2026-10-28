@@ -60,6 +60,8 @@ character makes the input invalid. Do not skip malformed records or silently
 ignore extra data. Numeric tokens supplied in grading fit in `int`; you do not
 need to implement an overflow-safe text-to-integer parser. Comments are not part
 of the input format.
+Use the `fscanf` conversion behavior taught in class; enforcing additional
+separator rules beyond those conversions is not required.
 
 `examples/readings.txt` contains:
 
